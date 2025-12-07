@@ -102,9 +102,19 @@ export interface Post {
     likesCount: number;
     createdAt: string;
     updatedAt: string;
-    author?: User;
+    author?: {
+        id: string;
+        name: string;
+        profileImage?: string | null;
+        headline?: string | null;
+    };
     comments?: Comment[];
     likes?: Like[];
+    _count?: {
+        comments: number;
+        likes: number;
+    };
+    isLiked?: boolean;
 }
 
 export interface Comment {

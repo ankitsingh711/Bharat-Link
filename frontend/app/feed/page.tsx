@@ -1,11 +1,214 @@
 'use client';
 
-import Link from 'next/link';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
+import { PostCard } from '@/components/feed/PostCard';
+import { CreatePostModal } from '@/components/feed/CreatePostModal';
+import { Post, User } from '@/types';
+import { postsApi } from '@/lib/api/endpoints/posts';
+import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket/socket';
 
 export default function FeedPage() {
+    const { data: session } = useSession();
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+    // Fetch current user info
+    useEffect(() => {
+        if (session?.user) {
+            setCurrentUser({
+                id: session.user.id || '',
+                email: session.user.email || '',
+                name: session.user.name || '',
+                profileImage: session.user.image || null,
+                headline: null,
+                createdAt: '',
+                updatedAt: '',
+            });
+        }
+    }, [session]);
+
+    // Fetch posts on mount
+    useEffect(() => {
+        const fetchPosts = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                const response = await postsApi.getPosts();
+                setPosts(response.items || []);
+            } catch (err: any) {
+                console.error('Error fetching posts:', err);
+                setError(err?.response?.data?.message || 'Failed to load posts');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchPosts();
+    }, []);
+
+    // Initialize WebSocket connection for real-time updates
+    useEffect(() => {
+        const socket = connectSocket();
+
+        // Listen for new posts
+        socket.on('post:created', (newPost: Post) => {
+            setPosts((prev) => [newPost, ...prev]);
+        });
+
+        // Listen for like updates
+        socket.on('post:liked', (data: { postId: string; likesCount: number; liked: boolean }) => {
+            setPosts((prev) =>
+                prev.map((post) =>
+                    post.id === data.postId
+                        ? {
+                            ...post,
+                            _count: {
+                                ...post._count,
+                                likes: data.likesCount,
+                            } as { comments: number; likes: number },
+                        }
+                        : post
+                )
+            );
+        });
+
+        // Listen for comment additions
+        socket.on('comment:added', (data: { postId: string; comment: any }) => {
+            setPosts((prev) =>
+                prev.map((post) =>
+                    post.id === data.postId
+                        ? {
+                            ...post,
+                            _count: {
+                                ...post._count,
+                                comments: (post._count?.comments || 0) + 1,
+                            } as { comments: number; likes: number },
+                        }
+                        : post
+                )
+            );
+        });
+
+        return () => {
+            disconnectSocket();
+        };
+    }, []);
+
+    const handleCreatePost = async (content: string) => {
+        try {
+            const newPost = await postsApi.createPost({ content });
+            // No need to manually add to state - WebSocket will handle it
+            // But we'll add it optimistically for instant feedback
+            setPosts([newPost, ...posts]);
+        } catch (err: any) {
+            console.error('Error creating post:', err);
+            throw err;
+        }
+    };
+
+    const handleLike = async (postId: string) => {
+        try {
+            // Optimistic update
+            setPosts((prev) =>
+                prev.map((post) => {
+                    if (post.id === postId) {
+                        const isCurrentlyLiked = post.isLiked || false;
+                        const currentLikes = post._count?.likes || 0;
+                        return {
+                            ...post,
+                            isLiked: !isCurrentlyLiked,
+                            _count: {
+                                ...post._count,
+                                likes: isCurrentlyLiked ? currentLikes - 1 : currentLikes + 1,
+                            } as { comments: number; likes: number },
+                        };
+                    }
+                    return post;
+                })
+            );
+
+            // Make API call
+            await postsApi.toggleLike(postId);
+        } catch (err: any) {
+            console.error('Error toggling like:', err);
+            // Revert optimistic update on error - refetch posts
+            try {
+                const response = await postsApi.getPosts();
+                setPosts(response.items || []);
+            } catch (refetchErr) {
+                console.error('Error refetching posts:', refetchErr);
+            }
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
+                <div className="space-y-6">
+                    {/* Loading skeleton for create post */}
+                    <Card className="animate-pulse">
+                        <CardContent className="p-5">
+                            <div className="flex space-x-3">
+                                <div className="w-12 h-12 bg-gray-200 rounded-full" />
+                                <div className="flex-1 h-12 bg-gray-200 rounded-xl" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Loading skeletons for posts */}
+                    {[1, 2, 3].map((i) => (
+                        <Card key={i} className="animate-pulse">
+                            <div className="p-6 space-y-4">
+                                <div className="flex space-x-3">
+                                    <div className="w-12 h-12 bg-gray-200 rounded-full" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-4 bg-gray-200 rounded w-1/3" />
+                                        <div className="h-3 bg-gray-200 rounded w-1/2" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="h-4 bg-gray-200 rounded" />
+                                    <div className="h-4 bg-gray-200 rounded w-5/6" />
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
+                <Card className="bg-red-50 border-red-200">
+                    <CardContent className="p-6">
+                        <div className="flex items-center space-x-3 text-red-800">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                            <div>
+                                <h3 className="font-semibold">Failed to load feed</h3>
+                                <p className="text-sm">{error}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto px-4 py-8 max-w-4xl">
             <div className="space-y-6">
@@ -13,100 +216,61 @@ export default function FeedPage() {
                 <Card className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-5">
                         <div className="flex space-x-3">
-                            <Avatar size="md" fallback="You" />
+                            <Avatar
+                                size="md"
+                                src={currentUser?.profileImage || undefined}
+                                fallback={currentUser?.name?.slice(0, 2).toUpperCase() || 'You'}
+                            />
                             <input
                                 type="text"
                                 placeholder="Start a post..."
                                 className="flex-1 px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-orange-300 focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
                                 readOnly
+                                onClick={() => setIsCreateModalOpen(true)}
                             />
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Posts Feed */}
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="border-b bg-gradient-to-r from-orange-50/50 to-green-50/50">
-                        <div className="flex items-start space-x-4">
-                            <Avatar size="lg" fallback="JD" />
-                            <div className="flex-1">
-                                <h3 className="font-bold text-lg text-gray-900">John Doe</h3>
-                                <p className="text-sm text-gray-600">Software Engineer at TechCorp</p>
-                                <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                        <p className="text-gray-800 mb-4 leading-relaxed">
-                            Excited to announce that I've joined TechCorp as a Senior Software Engineer! Looking forward to working with an
-                            amazing team building innovative solutions. #NewJob #SoftwareEngineering
-                        </p>
-                        <div className="flex items-center space-x-6 pt-4 border-t">
-                            <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                </svg>
-                                <span className="text-sm font-medium">Like</span>
-                            </button>
-                            <button className="flex items-center space-x-2 text-gray-600 hover:text-green-600 transition-colors">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                </svg>
-                                <span className="text-sm font-medium">Comment</span>
-                            </button>
-                            <button className="flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-colors">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                                </svg>
-                                <span className="text-sm font-medium">Share</span>
-                            </button>
-                        </div>
-                    </CardContent>
-                </Card>
+                {posts.length === 0 ? (
+                    <Card>
+                        <CardContent className="p-12 text-center">
+                            <svg
+                                className="w-16 h-16 mx-auto text-gray-300 mb-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={1.5}
+                                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                                />
+                            </svg>
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">No posts yet</h3>
+                            <p className="text-gray-500">Be the first to share something!</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    posts.map((post) => <PostCard key={post.id} post={post} onLike={handleLike} />)
+                )}
 
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="border-b bg-gradient-to-r from-green-50/50 to-orange-50/50">
-                        <div className="flex items-start space-x-4">
-                            <Avatar size="lg" fallback="JS" />
-                            <div className="flex-1">
-                                <h3 className="font-bold text-lg text-gray-900">Jane Smith</h3>
-                                <p className="text-sm text-gray-600">Product Manager at StartupXYZ</p>
-                                <p className="text-xs text-gray-500 mt-1">5 hours ago</p>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                        <p className="text-gray-800 mb-4 leading-relaxed">
-                            We're hiring! StartupXYZ is looking for talented Full Stack Engineers to join our growing team. If you're passionate
-                            about building products that make a difference, DM me! #Hiring #FullStack #Jobs
-                        </p>
-                        <div className="flex items-center space-x-6 pt-4 border-t">
-                            <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                </svg>
-                                <span className="text-sm font-medium">Like</span>
-                            </button>
-                            <button className="flex items-center space-x-2 text-gray-600 hover:text-green-600 transition-colors">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                </svg>
-                                <span className="text-sm font-medium">Comment</span>
-                            </button>
-                            <button className="flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-colors">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                                </svg>
-                                <span className="text-sm font-medium">Share</span>
-                            </button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <p className="text-center text-gray-500 py-4">
-                    That's all for now! Check back later for more updates.
-                </p>
+                {posts.length > 0 && (
+                    <p className="text-center text-gray-500 py-4">
+                        That's all for now! Check back later for more updates.
+                    </p>
+                )}
             </div>
+
+            {/* Create Post Modal */}
+            <CreatePostModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSubmit={handleCreatePost}
+                currentUser={currentUser}
+            />
         </div>
     );
 }

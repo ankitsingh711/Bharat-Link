@@ -22,7 +22,7 @@ export const initSocket = () => {
         console.log('WebSocket disconnected');
     });
 
-    socket.on'connect_error', (error) => {
+    socket.on('connect_error', (error) => {
         console.error('WebSocket connection error:', error);
     });
 
