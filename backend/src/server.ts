@@ -1,7 +1,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
+import { createServer } from 'http';
 import app from './app';
 import prisma from './lib/prisma';
+import { initializeWebSocket } from './config/websocket';
 
 const PORT = process.env.PORT || 4000;
 
@@ -10,7 +12,13 @@ async function main() {
         await prisma.$connect();
         console.log('Connected to Database');
 
-        app.listen(PORT, () => {
+        // Create HTTP server
+        const httpServer = createServer(app);
+
+        // Initialize WebSocket
+        initializeWebSocket(httpServer);
+
+        httpServer.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });
     } catch (error) {

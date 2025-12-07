@@ -39,3 +39,6 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         return res.status(401).json({ message: 'Invalid or expired token' });
     }
 };
+
+// Export as both authMiddleware and authenticate for compatibility
+export const authenticate = authMiddleware;
