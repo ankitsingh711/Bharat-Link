@@ -9,6 +9,7 @@ import userRoutes from './routes/user.routes';
 import jobRoutes from './routes/job.routes';
 import postRoutes from './routes/post.routes';
 import notificationRoutes from './routes/notification.routes';
+import connectionRoutes from './routes/connection.routes';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use('/auth', authRoutes);
+app.use('/users', connectionRoutes); // Connection routes under /users/:id/follow etc.
 app.use('/users', userRoutes);
 app.use('/jobs', jobRoutes);
 app.use('/posts', postRoutes);

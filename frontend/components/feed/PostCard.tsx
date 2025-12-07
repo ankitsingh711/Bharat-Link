@@ -4,19 +4,34 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { Post } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
 
 interface PostCardProps {
     post: Post & { _count?: { comments: number; likes: number }; isLiked?: boolean };
     onLike: (postId: string) => void;
     onComment?: (postId: string) => void;
     onShare?: (postId: string) => void;
+    onDelete?: (postId: string) => void;
+    onFollow?: (userId: string) => void;
+    currentUserId?: string;
+    isFollowing?: boolean;
 }
 
-export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
+export function PostCard({ post, onLike, onComment, onShare, onDelete, onFollow, currentUserId, isFollowing }: PostCardProps) {
     const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
     const likesCount = post._count?.likes || 0;
     const commentsCount = post._count?.comments || 0;
     const isLiked = post.isLiked || false;
+    const isAuthor = currentUserId === post.authorId;
+
+    const [showMenu, setShowMenu] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const handleDelete = () => {
+        setShowDeleteConfirm(false);
+        setShowMenu(false);
+        onDelete?.(post.id);
+    };
 
     return (
         <Card className="hover:shadow-lg transition-shadow">
@@ -28,13 +43,93 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
                         fallback={post.author?.name?.slice(0, 2).toUpperCase() || 'U'}
                     />
                     <div className="flex-1">
-                        <h3 className="font-bold text-lg text-gray-900">{post.author?.name || 'Unknown User'}</h3>
+                        <div className="flex items-center space-x-3">
+                            <h3 className="font-bold text-lg text-gray-900">{post.author?.name || 'Unknown User'}</h3>
+
+                            {/* Follow button (only for other users' posts) */}
+                            {!isAuthor && onFollow && (
+                                <button
+                                    onClick={() => onFollow(post.authorId)}
+                                    className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${isFollowing
+                                            ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            : 'bg-gradient-to-r from-orange-500 to-green-500 text-white hover:from-orange-600 hover:to-green-600'
+                                        }`}
+                                >
+                                    {isFollowing ? 'Following' : 'Follow'}
+                                </button>
+                            )}
+                        </div>
                         {post.author?.headline && (
                             <p className="text-sm text-gray-600">{post.author.headline}</p>
                         )}
                         <p className="text-xs text-gray-500 mt-1">{timeAgo}</p>
                     </div>
+
+                    {/* Three-dot menu (only for post author) */}
+                    {isAuthor && onDelete && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowMenu(!showMenu)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                aria-label="Post options"
+                            >
+                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                </svg>
+                            </button>
+
+                            {/* Dropdown menu */}
+                            {showMenu && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setShowMenu(false)}
+                                    />
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                                        <button
+                                            onClick={() => {
+                                                setShowMenu(false);
+                                                setShowDeleteConfirm(true);
+                                            }}
+                                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            <span>Delete post</span>
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
+
+                {/* Delete confirmation dialog */}
+                {showDeleteConfirm && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete post?</h3>
+                            <p className="text-gray-600 mb-6">
+                                This action cannot be undone. Your post will be permanently deleted.
+                            </p>
+                            <div className="flex justify-end space-x-3">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </CardHeader>
             <CardContent className="p-6">
                 <p className="text-gray-800 mb-4 leading-relaxed whitespace-pre-wrap">
@@ -44,8 +139,8 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
                     <button
                         onClick={() => onLike(post.id)}
                         className={`flex items-center space-x-2 transition-colors ${isLiked
-                                ? 'text-blue-600'
-                                : 'text-gray-600 hover:text-blue-600'
+                            ? 'text-blue-600'
+                            : 'text-gray-600 hover:text-blue-600'
                             }`}
                     >
                         <svg className="w-5 h-5" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">

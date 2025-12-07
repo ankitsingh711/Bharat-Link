@@ -75,12 +75,8 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Force light mode - removed dark mode support */
+/* Application will always use white background */
 
 /* Animations */
 @keyframes fadeIn {

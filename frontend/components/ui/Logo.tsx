@@ -60,6 +60,7 @@ export function Logo({ size = 'md', variant = 'full', className }: LogoProps) {
             width={dimensions.width}
             className={cn('object-contain rounded-lg', className)}
             priority
+            unoptimized
         />
     );
 }

@@ -8,15 +8,17 @@ import { PostCard } from '@/components/feed/PostCard';
 import { CreatePostModal } from '@/components/feed/CreatePostModal';
 import { Post, User } from '@/types';
 import { postsApi } from '@/lib/api/endpoints/posts';
-import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket/socket';
+import { connectionsApi } from '@/lib/api/endpoints/connections';
+import { connectSocket, disconnectSocket } from '@/lib/socket/socket';
 
 export default function FeedPage() {
     const { data: session } = useSession();
     const [posts, setPosts] = useState<Post[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
 
     // Fetch current user info
     useEffect(() => {
@@ -37,20 +39,46 @@ export default function FeedPage() {
     useEffect(() => {
         const fetchPosts = async () => {
             try {
-                setIsLoading(true);
+                setLoading(true);
                 setError(null);
                 const response = await postsApi.getPosts();
-                setPosts(response.items || []);
+                const fetchedPosts = response.items || [];
+                setPosts(fetchedPosts);
+
+                // Fetch connection status for all post authors
+                if (session?.user?.id) {
+                    const uniqueAuthorIds = [...new Set(fetchedPosts.map(p => p.authorId))];
+                    const connectionStatuses = await Promise.all(
+                        uniqueAuthorIds
+                            .filter(id => id !== session.user.id) // Exclude own posts
+                            .map(async (authorId) => {
+                                try {
+                                    const status = await connectionsApi.getConnectionStatus(authorId);
+                                    return { authorId, isFollowing: status.isFollowing };
+                                } catch (err) {
+                                    return { authorId, isFollowing: false };
+                                }
+                            })
+                    );
+
+                    const newFollowingMap: Record<string, boolean> = {};
+                    connectionStatuses.forEach(({ authorId, isFollowing }) => {
+                        newFollowingMap[authorId] = isFollowing;
+                    });
+                    setFollowingMap(newFollowingMap);
+                }
             } catch (err: any) {
                 console.error('Error fetching posts:', err);
                 setError(err?.response?.data?.message || 'Failed to load posts');
             } finally {
-                setIsLoading(false);
+                setLoading(false);
             }
         };
 
-        fetchPosts();
-    }, []);
+        if (session?.user) {
+            fetchPosts();
+        }
+    }, [session]);
 
     // Initialize WebSocket connection for real-time updates
     useEffect(() => {
@@ -58,7 +86,14 @@ export default function FeedPage() {
 
         // Listen for new posts
         socket.on('post:created', (newPost: Post) => {
-            setPosts((prev) => [newPost, ...prev]);
+            setPosts((prev) => {
+                // Check if post already exists to prevent duplicates
+                const exists = prev.some(post => post.id === newPost.id);
+                if (exists) {
+                    return prev;
+                }
+                return [newPost, ...prev];
+            });
         });
 
         // Listen for like updates
@@ -95,6 +130,11 @@ export default function FeedPage() {
             );
         });
 
+        // Listen for post deletions
+        socket.on('post:deleted', (data: { postId: string }) => {
+            setPosts((prev) => prev.filter(post => post.id !== data.postId));
+        });
+
         return () => {
             disconnectSocket();
         };
@@ -103,12 +143,56 @@ export default function FeedPage() {
     const handleCreatePost = async (content: string) => {
         try {
             const newPost = await postsApi.createPost({ content });
-            // No need to manually add to state - WebSocket will handle it
-            // But we'll add it optimistically for instant feedback
+            // Add optimistically for instant feedback (WebSocket duplicate check prevents doubles)
             setPosts([newPost, ...posts]);
         } catch (err: any) {
             console.error('Error creating post:', err);
             throw err;
+        }
+    };
+
+    const handleDeletePost = async (postId: string) => {
+        try {
+            // Optimistic delete - remove from UI immediately
+            const postToDelete = posts.find(p => p.id === postId);
+            setPosts((prev) => prev.filter(post => post.id !== postId));
+
+            // Make API call
+            await postsApi.deletePost(postId);
+        } catch (err: any) {
+            console.error('Error deleting post:', err);
+            // Revert optimistic delete on error - refetch posts
+            try {
+                const response = await postsApi.getPosts();
+                setPosts(response.items || []);
+            } catch (refetchErr) {
+                console.error('Error refetching posts:', refetchErr);
+            }
+        }
+    };
+
+    const handleFollow = async (userId: string) => {
+        try {
+            const isCurrentlyFollowing = followingMap[userId];
+
+            // Optimistic update
+            setFollowingMap(prev => ({
+                ...prev,
+                [userId]: !isCurrentlyFollowing,
+            }));
+
+            if (isCurrentlyFollowing) {
+                await connectionsApi.unfollowUser(userId);
+            } else {
+                await connectionsApi.followUser(userId);
+            }
+        } catch (err: any) {
+            console.error('Error following/unfollowing user:', err);
+            // Revert optimistic update on error
+            setFollowingMap(prev => ({
+                ...prev,
+                [userId]: !prev[userId],
+            }));
         }
     };
 
@@ -147,7 +231,7 @@ export default function FeedPage() {
         }
     };
 
-    if (isLoading) {
+    if (loading) {
         return (
             <div className="container mx-auto px-4 py-8 max-w-4xl">
                 <div className="space-y-6">
@@ -254,7 +338,17 @@ export default function FeedPage() {
                         </CardContent>
                     </Card>
                 ) : (
-                    posts.map((post) => <PostCard key={post.id} post={post} onLike={handleLike} />)
+                    posts.map((post) => (
+                        <PostCard
+                            key={post.id}
+                            post={post}
+                            onLike={handleLike}
+                            onDelete={handleDeletePost}
+                            onFollow={handleFollow}
+                            currentUserId={currentUser?.id}
+                            isFollowing={followingMap[post.authorId] || false}
+                        />
+                    ))
                 )}
 
                 {posts.length > 0 && (
