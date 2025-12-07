@@ -33,7 +33,7 @@ export default function FeedPage() {
                 updatedAt: '',
             });
         }
-    }, [session]);
+    }, [session?.user?.id, session?.user?.email, session?.user?.name, session?.user?.image]);
 
     // Fetch posts on mount
     useEffect(() => {
@@ -78,7 +78,7 @@ export default function FeedPage() {
         if (session?.user) {
             fetchPosts();
         }
-    }, [session]);
+    }, [session?.user?.id]);
 
     // Initialize WebSocket connection for real-time updates
     useEffect(() => {
@@ -294,77 +294,70 @@ export default function FeedPage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <div className="space-y-6">
+        <div className="min-h-screen bg-gray-50">
+            <div className="container mx-auto px-4 py-6 max-w-2xl">
                 {/* Create Post Card */}
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-5">
-                        <div className="flex space-x-3">
-                            <Avatar
-                                size="md"
-                                src={currentUser?.profileImage || undefined}
-                                fallback={currentUser?.name?.slice(0, 2).toUpperCase() || 'You'}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Start a post..."
-                                className="flex-1 px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-orange-300 focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
-                                readOnly
-                                onClick={() => setIsCreateModalOpen(true)}
-                            />
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+                    <div
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center space-x-3 cursor-pointer"
+                    >
+                        <Avatar
+                            src={currentUser?.profileImage || undefined}
+                            fallback={currentUser?.name?.slice(0, 2).toUpperCase() || 'U'}
+                            size="md"
+                        />
+                        <div className="flex-1 bg-gray-100 hover:bg-gray-200 rounded-full px-4 py-3 transition-colors">
+                            <p className="text-gray-600 text-sm">Start a post...</p>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
                 {/* Posts Feed */}
-                {posts.length === 0 ? (
-                    <Card>
-                        <CardContent className="p-12 text-center">
-                            <svg
-                                className="w-16 h-16 mx-auto text-gray-300 mb-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={1.5}
-                                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                                />
-                            </svg>
-                            <h3 className="text-lg font-semibold text-gray-700 mb-2">No posts yet</h3>
-                            <p className="text-gray-500">Be the first to share something!</p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    posts.map((post) => (
-                        <PostCard
-                            key={post.id}
-                            post={post}
-                            onLike={handleLike}
-                            onDelete={handleDeletePost}
-                            onFollow={handleFollow}
-                            currentUserId={currentUser?.id}
-                            isFollowing={followingMap[post.authorId] || false}
-                        />
-                    ))
-                )}
+                <div className="space-y-4">
+                    {posts.length === 0 ? (
+                        <Card>
+                            <CardContent className="p-12 text-center">
+                                <svg
+                                    className="w-16 h-16 mx-auto text-gray-300 mb-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={1.5}
+                                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                                    />
+                                </svg>
+                                <h3 className="text-lg font-semibold text-gray-700 mb-2">No posts yet</h3>
+                                <p className="text-gray-500">Be the first to share something!</p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        posts.map((post) => (
+                            <PostCard
+                                key={post.id}
+                                post={post}
+                                onLike={handleLike}
+                                onDelete={handleDeletePost}
+                                onFollow={handleFollow}
+                                currentUserId={currentUser?.id}
+                                isFollowing={followingMap[post.authorId] || false}
+                            />
+                        ))
+                    )}
+                </div>
 
-                {posts.length > 0 && (
-                    <p className="text-center text-gray-500 py-4">
-                        That's all for now! Check back later for more updates.
-                    </p>
-                )}
+                {/* Create Post Modal */}
+                <CreatePostModal
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSubmit={handleCreatePost}
+                    currentUser={currentUser}
+                />
             </div>
-
-            {/* Create Post Modal */}
-            <CreatePostModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSubmit={handleCreatePost}
-                currentUser={currentUser}
-            />
         </div>
     );
 }

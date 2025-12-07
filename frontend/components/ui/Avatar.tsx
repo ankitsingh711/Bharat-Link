@@ -7,12 +7,13 @@ interface AvatarProps {
     src?: string | null;
     alt?: string;
     fallback?: string;
-    size?: 'sm' | 'md' | 'lg' | 'xl';
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
     className?: string;
 }
 
 export function Avatar({ src, alt, fallback, size = 'md', className }: AvatarProps) {
     const sizes = {
+        xs: 'h-6 w-6 text-[10px]',
         sm: 'h-8 w-8 text-xs',
         md: 'h-10 w-10 text-sm',
         lg: 'h-12 w-12 text-base',
@@ -34,7 +35,8 @@ export function Avatar({ src, alt, fallback, size = 'md', className }: AvatarPro
     return (
         <div
             className={cn(
-                'relative inline-flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 font-semibold text-white overflow-hidden',
+                'relative inline-flex items-center justify-center rounded-full overflow-hidden border border-gray-200',
+                src ? 'bg-white' : 'bg-gradient-to-br from-blue-500 to-blue-600',
                 sizes[size],
                 className
             )}
@@ -50,7 +52,7 @@ export function Avatar({ src, alt, fallback, size = 'md', className }: AvatarPro
                     }}
                 />
             ) : (
-                <span>{initials}</span>
+                <span className="font-semibold text-white">{initials}</span>
             )}
         </div>
     );

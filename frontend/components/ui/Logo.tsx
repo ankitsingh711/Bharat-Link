@@ -13,10 +13,10 @@ interface LogoProps {
 export function Logo({ size = 'md', variant = 'full', className }: LogoProps) {
     const sizes = {
         xxs: { height: 12, width: variant === 'full' ? 60 : 12 },
-        xs: { height: 24, width: variant === 'full' ? 105 : 24 },
-        sm: { height: 32, width: variant === 'full' ? 140 : 32 },
+        xs: { height: 24, width: variant === 'full' ? 80 : 24 },
+        sm: { height: 40, width: variant === 'full' ? 140 : 40 },
         md: { height: 48, width: variant === 'full' ? 210 : 48 },
-        lg: { height: 30, width: variant === 'full' ? 280 : 30 },
+        lg: { height: 60, width: variant === 'full' ? 280 : 60 },
     };
 
     const dimensions = sizes[size];
@@ -58,7 +58,8 @@ export function Logo({ size = 'md', variant = 'full', className }: LogoProps) {
             alt="Bharat Link"
             height={dimensions.height}
             width={dimensions.width}
-            className={cn('object-contain rounded-lg', className)}
+            className={cn('object-contain max-h-full', className)}
+            style={{ maxHeight: `${dimensions.height}px`, height: 'auto' }}
             priority
             unoptimized
         />
