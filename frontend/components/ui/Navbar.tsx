@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -66,6 +67,9 @@ export function Navbar() {
                                     >
                                         Profile
                                     </Link>
+
+                                    {/* Notification Bell */}
+                                    <NotificationBell />
 
                                     {/* Profile Dropdown */}
                                     <div className="relative group ml-3 pl-3 border-l border-gray-200">

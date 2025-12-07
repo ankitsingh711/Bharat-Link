@@ -1,4 +1,27 @@
 // User types
+// Notification Types
+export enum NotificationType {
+    LIKE = 'LIKE',
+    COMMENT = 'COMMENT',
+    FOLLOW = 'FOLLOW'
+}
+
+export interface Notification {
+    id: string;
+    userId: string;
+    type: NotificationType;
+    actorId: string;
+    postId?: string;
+    commentId?: string;
+    message: string;
+    read: boolean;
+    createdAt: string;
+    actor?: {
+        id: string;
+        name: string;
+        profileImage?: string | null;
+    };
+}
 export interface User {
     id: string;
     email: string;

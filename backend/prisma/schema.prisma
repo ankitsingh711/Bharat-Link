@@ -31,6 +31,10 @@ model User {
   comments         Comment[]
   likes            Like[]
   
+  // Notifications
+  notifications    Notification[] @relation("UserNotifications")
+  triggeredNotifications Notification[] @relation("ActorNotifications")
+  
   // Connections (Self-relation)
   followedBy       Connection[] @relation("followedBy")
   following        Connection[] @relation("following")
@@ -112,6 +116,7 @@ model Post {
   author    User     @relation(fields: [authorId], references: [id])
   comments  Comment[]
   likes     Like[]
+  notifications Notification[]
 }
 
 model Comment {
@@ -123,6 +128,7 @@ model Comment {
 
   post      Post     @relation(fields: [postId], references: [id])
   author    User     @relation(fields: [authorId], references: [id])
+  notifications Notification[]
 }
 
 model Like {
@@ -212,6 +218,32 @@ model Skill {
   name   String
   
   user   User   @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           // Recipient of notification
+  type      NotificationType
+  actorId   String           // Person who triggered the notification
+  postId    String?          // Optional: related post
+  commentId String?          // Optional: related comment
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  
+  user      User     @relation("UserNotifications", fields: [userId], references: [id])
+  actor     User     @relation("ActorNotifications", fields: [actorId], references: [id])
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
 }
 
 enum Role {

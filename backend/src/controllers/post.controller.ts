@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { postService } from '../services/post.service';
+import { notificationService } from '../services/notification.service';
 import { z } from 'zod';
 import { getSocketInstance } from '../config/websocket';
 
@@ -252,6 +253,7 @@ export const postController = {
         try {
             const { id } = req.params;
             const userId = (req as any).user?.id;
+            const userName = (req as any).user?.name || 'Someone';
 
             if (!userId) {
                 return res.status(401).json({
@@ -262,7 +264,7 @@ export const postController = {
 
             const result = await postService.toggleLike(id, userId);
 
-            // Emit WebSocket event
+            // Emit WebSocket event for like count update
             const io = getSocketInstance();
             if (io) {
                 io.emit('post:liked', {
@@ -270,6 +272,25 @@ export const postController = {
                     likesCount: result.likesCount,
                     liked: result.liked,
                 });
+            }
+
+            // Create notification for post author if liked (not if unliked)
+            if (result.liked) {
+                const post = await postService.getPostById(id);
+                if (post && post.authorId !== userId) {
+                    const notification = await notificationService.createNotification({
+                        userId: post.authorId,
+                        type: 'LIKE',
+                        actorId: userId,
+                        postId: id,
+                        message: `${userName} liked your post`,
+                    });
+
+                    // Emit notification via WebSocket to post author
+                    if (notification && io) {
+                        io.to(`user:${post.authorId}`).emit('notification:new', notification);
+                    }
+                }
             }
 
             res.json({
@@ -294,6 +315,7 @@ export const postController = {
         try {
             const { id } = req.params;
             const userId = (req as any).user?.id;
+            const userName = (req as any).user?.name || 'Someone';
 
             if (!userId) {
                 return res.status(401).json({
@@ -306,13 +328,31 @@ export const postController = {
 
             const comment = await postService.addComment(id, userId, content);
 
-            // Emit WebSocket event
+            // Emit WebSocket event for new comment
             const io = getSocketInstance();
             if (io) {
                 io.emit('comment:added', {
                     postId: id,
                     comment,
                 });
+            }
+
+            // Create notification for post author
+            const post = await postService.getPostById(id);
+            if (post && post.authorId !== userId) {
+                const notification = await notificationService.createNotification({
+                    userId: post.authorId,
+                    type: 'COMMENT',
+                    actorId: userId,
+                    postId: id,
+                    commentId: comment.id,
+                    message: `${userName} commented on your post`,
+                });
+
+                // Emit notification via WebSocket to post author
+                if (notification && io) {
+                    io.to(`user:${post.authorId}`).emit('notification:new', notification);
+                }
             }
 
             res.status(201).json({
