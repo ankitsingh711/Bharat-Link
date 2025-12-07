@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { SessionProvider } from 'next-auth/react';
+import { Navbar } from '@/components/ui/Navbar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -34,11 +35,22 @@ export default function RootLayout({
         <SessionProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
+              <Navbar />
               {children}
             </AuthProvider>
           </QueryClientProvider>
         </SessionProvider>
-        <Toaster />
+        <Toaster
+          position="top-right"
+          reverseOrder={false}
+          gutter={8}
+          toastOptions={{
+            duration: 4000,
+            style: {
+              maxWidth: '500px',
+            },
+          }}
+        />
       </body>
     </html>
   );

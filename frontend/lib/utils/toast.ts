@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast';
 
 /**
- * Custom toast utility with India-inspired styling for Bharat Link
+ * Custom toast utility with beautiful, professional styling for Bharat Link
  */
 
 export const showToast = {
@@ -10,16 +10,21 @@ export const showToast = {
             duration: 4000,
             position: 'top-right',
             style: {
-                background: '#f0fdf4',
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
                 color: '#166534',
-                border: '2px solid #22c55e',
-                padding: '16px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '500',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #86efac',
+                padding: '16px 20px',
+                borderRadius: '16px',
+                fontSize: '15px',
+                fontWeight: '600',
+                boxShadow: '0 20px 25px -5px rgba(34, 197, 94, 0.15), 0 8px 10px -6px rgba(34, 197, 94, 0.1)',
+                backdropFilter: 'blur(10px)',
+                minWidth: '300px',
             },
-            icon: '✅',
+            iconTheme: {
+                primary: '#22c55e',
+                secondary: '#ffffff',
+            },
         });
     },
 
@@ -28,16 +33,21 @@ export const showToast = {
             duration: 4000,
             position: 'top-right',
             style: {
-                background: '#fef2f2',
+                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
                 color: '#991b1b',
-                border: '2px solid #ef4444',
-                padding: '16px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '500',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #fca5a5',
+                padding: '16px 20px',
+                borderRadius: '16px',
+                fontSize: '15px',
+                fontWeight: '600',
+                boxShadow: '0 20px 25px -5px rgba(239, 68, 68, 0.15), 0 8px 10px -6px rgba(239, 68, 68, 0.1)',
+                backdropFilter: 'blur(10px)',
+                minWidth: '300px',
             },
-            icon: '❌',
+            iconTheme: {
+                primary: '#ef4444',
+                secondary: '#ffffff',
+            },
         });
     },
 
@@ -46,16 +56,18 @@ export const showToast = {
             duration: 4000,
             position: 'top-right',
             style: {
-                background: '#eff6ff',
-                color: '#1e40af',
-                border: '2px solid #3b82f6',
-                padding: '16px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '500',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)',
+                color: '#9a3412',
+                border: '1px solid #fdba74',
+                padding: '16px 20px',
+                borderRadius: '16px',
+                fontSize: '15px',
+                fontWeight: '600',
+                boxShadow: '0 20px 25px -5px rgba(249, 115, 22, 0.15), 0 8px 10px -6px rgba(249, 115, 22, 0.1)',
+                backdropFilter: 'blur(10px)',
+                minWidth: '300px',
             },
-            icon: 'ℹ️',
+            icon: '💡',
         });
     },
 
@@ -63,14 +75,16 @@ export const showToast = {
         return toast.loading(message, {
             position: 'top-right',
             style: {
-                background: '#fff7ed',
-                color: '#9a3412',
-                border: '2px solid #ff6b35',
-                padding: '16px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '500',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f9fafb 100%)',
+                color: '#374151',
+                border: '1px solid #e5e7eb',
+                padding: '16px 20px',
+                borderRadius: '16px',
+                fontSize: '15px',
+                fontWeight: '600',
+                boxShadow: '0 20px 25px -5px rgba(107, 114, 128, 0.15), 0 8px 10px -6px rgba(107, 114, 128, 0.1)',
+                backdropFilter: 'blur(10px)',
+                minWidth: '300px',
             },
         });
     },
@@ -93,11 +107,35 @@ export const showToast = {
             {
                 position: 'top-right',
                 style: {
-                    padding: '16px',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    boxShadow: '0 20px 25px -5px rgba(107, 114, 128, 0.15), 0 8px 10px -6px rgba(107, 114, 128, 0.1)',
+                    backdropFilter: 'blur(10px)',
+                    minWidth: '300px',
+                },
+                success: {
+                    style: {
+                        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                        color: '#166534',
+                        border: '1px solid #86efac',
+                    },
+                    iconTheme: {
+                        primary: '#22c55e',
+                        secondary: '#ffffff',
+                    },
+                },
+                error: {
+                    style: {
+                        background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                        color: '#991b1b',
+                        border: '1px solid #fca5a5',
+                    },
+                    iconTheme: {
+                        primary: '#ef4444',
+                        secondary: '#ffffff',
+                    },
                 },
             }
         );

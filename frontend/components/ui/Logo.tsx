@@ -5,13 +5,15 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 
 interface LogoProps {
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'xxs' | 'xs' | 'sm' | 'md' | 'lg';
     variant?: 'full' | 'icon';
     className?: string;
 }
 
 export function Logo({ size = 'md', variant = 'full', className }: LogoProps) {
     const sizes = {
+        xxs: { height: 20, width: variant === 'full' ? 88 : 20 },
+        xs: { height: 24, width: variant === 'full' ? 105 : 24 },
         sm: { height: 32, width: variant === 'full' ? 140 : 32 },
         md: { height: 48, width: variant === 'full' ? 210 : 48 },
         lg: { height: 64, width: variant === 'full' ? 280 : 64 },
@@ -56,7 +58,7 @@ export function Logo({ size = 'md', variant = 'full', className }: LogoProps) {
             alt="Bharat Link"
             height={dimensions.height}
             width={dimensions.width}
-            className={cn('object-contain', className)}
+            className={cn('object-contain rounded-lg', className)}
             priority
         />
     );

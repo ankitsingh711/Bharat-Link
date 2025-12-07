@@ -3,6 +3,41 @@ import { getSession } from 'next-auth/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+// Session cache to prevent redundant getSession calls
+let sessionCache: {
+    accessToken: string | null;
+    timestamp: number;
+} | null = null;
+
+const SESSION_CACHE_TTL = 30000; // 30 seconds cache
+
+// Helper function to get cached or fresh session
+async function getCachedSession() {
+    const now = Date.now();
+
+    // Return cached session if still valid
+    if (sessionCache && (now - sessionCache.timestamp < SESSION_CACHE_TTL)) {
+        return sessionCache.accessToken;
+    }
+
+    // Fetch fresh session
+    const session = await getSession();
+    const accessToken = session?.accessToken as string | null;
+
+    // Update cache
+    sessionCache = {
+        accessToken,
+        timestamp: now,
+    };
+
+    return accessToken;
+}
+
+// Clear session cache (useful for logout)
+export function clearSessionCache() {
+    sessionCache = null;
+}
+
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
     baseURL: API_URL,
@@ -12,12 +47,12 @@ const apiClient: AxiosInstance = axios.create({
     timeout: 10000,
 });
 
-// Request interceptor to add auth token from session
+// Request interceptor to add auth token from cached session
 apiClient.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-        const session = await getSession();
-        if (session?.accessToken && config.headers) {
-            config.headers.Authorization = `Bearer ${session.accessToken}`;
+        const accessToken = await getCachedSession();
+        if (accessToken && config.headers) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
         }
         return config;
     },
@@ -37,6 +72,8 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
+                // Clear cache and get fresh session
+                clearSessionCache();
                 const session = await getSession();
                 const refreshToken = session?.refreshToken;
 
@@ -48,8 +85,11 @@ apiClient.interceptors.response.use(
 
                     const { accessToken } = response.data;
 
-                    // Note: With NextAuth, we'd need to update the session here
-                    // For now, redirect to login if refresh fails
+                    // Update cache with new token
+                    sessionCache = {
+                        accessToken,
+                        timestamp: Date.now(),
+                    };
 
                     // Retry original request with new token
                     if (originalRequest.headers) {
@@ -58,7 +98,8 @@ apiClient.interceptors.response.use(
                     return apiClient(originalRequest);
                 }
             } catch (refreshError) {
-                // Refresh failed, redirect to login
+                // Refresh failed, clear cache and redirect to login
+                clearSessionCache();
                 window.location.href = '/login';
                 return Promise.reject(refreshError);
             }

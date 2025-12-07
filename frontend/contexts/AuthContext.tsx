@@ -6,6 +6,7 @@ import { authApi } from '@/lib/api/endpoints/auth';
 import type { User, LoginCredentials, SignupData } from '@/types';
 import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/utils/toast';
+import { clearSessionCache } from '@/lib/api/client';
 
 interface AuthContextType {
     user: User | null;
@@ -68,6 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         try {
+            // Clear session cache before signing out
+            clearSessionCache();
+
             // Sign out using NextAuth
             await nextAuthSignOut({ redirect: false });
             router.push('/login');

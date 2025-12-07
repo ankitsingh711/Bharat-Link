@@ -25,26 +25,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-green-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Logo size="sm" />
-            <span className="text-2xl font-bold gradient-text">
-              Bharat Link
-            </span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/login">
-              <Button variant="ghost" className="cursor-pointer">Sign In</Button>
-            </Link>
-            <Link href="/signup">
-              <Button variant="gradient" className="cursor-pointer">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center animate-fade-in">
         <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 leading-tight">
