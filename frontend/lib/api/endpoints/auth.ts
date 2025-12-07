@@ -28,8 +28,15 @@ export const authApi = {
     /**
      * Verify email with confirmation code
      */
-    async verifyEmail(email: string, code: string): Promise<void> {
+    async verify(email: string, code: string): Promise<void> {
         await apiClient.post('/auth/verify', { email, code });
+    },
+
+    /**
+     * Resend verification code
+     */
+    async resendVerificationCode(email: string): Promise<void> {
+        await apiClient.post('/auth/resend-code', { email });
     },
 
     /**

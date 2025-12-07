@@ -23,6 +23,9 @@ const validate = (schema: z.ZodSchema) => (req: any, res: any, next: any) => {
 
 router.post('/signup', validate(signupSchema), authController.signup);
 router.post('/verify', authController.verify);
+router.post('/resend-code', authController.resendCode);
 router.post('/login', authController.login);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 export default router;

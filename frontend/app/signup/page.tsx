@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Logo } from '@/components/ui/Logo';
+import { showToast } from '@/lib/utils/toast';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -18,7 +20,6 @@ export default function SignupPage() {
         password: '',
         confirmPassword: '',
     });
-    const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,16 +31,15 @@ export default function SignupPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
 
         // Validation
         if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+            showToast.error('Passwords do not match');
             return;
         }
 
         if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters');
+            showToast.error('Password must be at least 8 characters');
             return;
         }
 
@@ -48,24 +48,33 @@ export default function SignupPage() {
         try {
             const { confirmPassword, ...signupData } = formData;
             await signup(signupData);
-            router.push('/feed');
+            showToast.success('Account created! Please verify your email.');
+            // Redirect to verification page with email in query params
+            router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to create account. Please try again.');
+            // Check if error is "User is not confirmed" - this is actually success!
+            if (err.response?.data?.message?.includes('not confirmed')) {
+                showToast.success('Account created! Please verify your email.');
+                // User was created but needs verification
+                router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+                return;
+            }
+            showToast.error(err.response?.data?.message || 'Failed to create account. Please try again.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 px-4 py-12">
-            <Card className="w-full max-w-md">
-                <CardHeader className="space-y-1 text-center">
-                    <div className="flex justify-center mb-4">
-                        <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg"></div>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-orange-100/50 to-green-50 px-4 py-12">
+            <Card className="w-full max-w-md animate-slide-up">
+                <CardHeader className="space-y-3 text-center">
+                    <div className="flex justify-center mb-2">
+                        <Logo size="md" variant="icon" />
                     </div>
-                    <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-                    <CardDescription>
-                        Join BharatLink and start networking
+                    <CardTitle className="text-3xl">Create Account</CardTitle>
+                    <CardDescription className="text-base">
+                        Join Bharat Link and start networking
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -121,15 +130,9 @@ export default function SignupPage() {
                             disabled={isLoading}
                         />
 
-                        {error && (
-                            <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-                                <p className="text-sm text-red-600">{error}</p>
-                            </div>
-                        )}
-
                         <Button
                             type="submit"
-                            className="w-full"
+                            className="w-full cursor-pointer"
                             isLoading={isLoading}
                             disabled={isLoading}
                         >
@@ -139,18 +142,18 @@ export default function SignupPage() {
 
                     <div className="mt-6 text-center text-sm text-gray-600">
                         Already have an account?{' '}
-                        <Link href="/login" className="text-blue-600 hover:underline font-medium">
+                        <Link href="/login" className="text-orange-600 hover:text-orange-700 hover:underline font-semibold transition-colors cursor-pointer">
                             Sign in
                         </Link>
                     </div>
 
-                    <p className="mt-4 text-xs text-center text-gray-500">
+                    <p className="mt-6 text-xs text-center text-gray-500 leading-relaxed">
                         By creating an account, you agree to our{' '}
-                        <Link href="/terms" className="text-blue-600 hover:underline">
+                        <Link href="/terms" className="text-orange-600 hover:text-orange-700 hover:underline transition-colors">
                             Terms of Service
                         </Link>{' '}
                         and{' '}
-                        <Link href="/privacy" className="text-blue-600 hover:underline">
+                        <Link href="/privacy" className="text-orange-600 hover:text-orange-700 hover:underline transition-colors">
                             Privacy Policy
                         </Link>
                     </p>

@@ -14,28 +14,30 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         return (
             <div className="w-full">
                 {label && (
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                    <label className="mb-2 block text-sm font-semibold text-gray-700">
                         {label}
-                        {props.required && <span className="text-red-500 ml-1">*</span>}
+                        {props.required && <span className="text-orange-500 ml-1">*</span>}
                     </label>
                 )}
                 <input
                     ref={ref}
                     className={cn(
-                        'flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm',
+                        'flex h-11 w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-2.5 text-base',
                         'placeholder:text-gray-400',
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                        'transition-all duration-200',
+                        'focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500',
+                        'hover:border-gray-300',
                         'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50',
-                        error && 'border-red-500 focus:ring-red-500',
+                        error && 'border-red-400 focus:ring-red-500/20 focus:border-red-500',
                         className
                     )}
                     {...props}
                 />
                 {error && (
-                    <p className="mt-1 text-sm text-red-600">{error}</p>
+                    <p className="mt-2 text-sm text-red-600 font-medium">{error}</p>
                 )}
                 {helperText && !error && (
-                    <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+                    <p className="mt-2 text-sm text-gray-500">{helperText}</p>
                 )}
             </div>
         );

@@ -5,6 +5,7 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>BharatLink - Professional Networking for India</title>
+        <title>Bharat Link - Professional Networking for India</title>
         <meta name="description" content="India's premier professional networking platform" />
       </head>
       <body className={inter.className}>
@@ -34,6 +35,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
         </QueryClientProvider>
+        <Toaster />
       </body>
     </html>
   );

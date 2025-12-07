@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils/cn';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'gradient';
     size?: 'sm' | 'md' | 'lg';
     isLoading?: boolean;
 }
@@ -18,20 +18,21 @@ export function Button({
     disabled,
     ...props
 }: ButtonProps) {
-    const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+    const baseStyles = 'inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 transform hover:scale-[1.02] active:scale-[0.98]';
 
     const variants = {
-        primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-600',
-        secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus-visible:ring-gray-500',
-        outline: 'border-2 border-gray-300 bg-transparent hover:bg-gray-50 focus-visible:ring-gray-500',
-        ghost: 'hover:bg-gray-100 focus-visible:ring-gray-500',
-        danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600',
+        primary: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg focus-visible:ring-orange-500',
+        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 shadow-sm hover:shadow-md focus-visible:ring-gray-500',
+        outline: 'border-2 border-orange-500 text-orange-600 bg-transparent hover:bg-orange-50 focus-visible:ring-orange-500',
+        ghost: 'hover:bg-gray-100 text-gray-700 focus-visible:ring-gray-500',
+        danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-md hover:shadow-lg focus-visible:ring-red-500',
+        gradient: 'bg-gradient-to-r from-orange-500 via-orange-600 to-green-600 text-white hover:shadow-xl hover:shadow-orange-500/50 focus-visible:ring-orange-500 animate-pulse-glow',
     };
 
     const sizes = {
         sm: 'h-9 px-3 text-sm',
-        md: 'h-10 px-4 py-2',
-        lg: 'h-12 px-6 text-lg',
+        md: 'h-11 px-5 py-2.5 text-base',
+        lg: 'h-14 px-8 text-lg',
     };
 
     return (
@@ -42,7 +43,7 @@ export function Button({
         >
             {isLoading && (
                 <svg
-                    className="mr-2 h-4 w-4 animate-spin"
+                    className="mr-2 h-5 w-5 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"

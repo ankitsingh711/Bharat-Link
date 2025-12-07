@@ -3,6 +3,9 @@ import {
     SignUpCommand,
     InitiateAuthCommand,
     ConfirmSignUpCommand,
+    ResendConfirmationCodeCommand,
+    ForgotPasswordCommand,
+    ConfirmForgotPasswordCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { config } from '../config';
 
@@ -33,6 +36,15 @@ export class AuthService {
         return client.send(command);
     }
 
+    async resendVerificationCode(email: string) {
+        const command = new ResendConfirmationCodeCommand({
+            ClientId: config.COGNITO_CLIENT_ID,
+            Username: email,
+        });
+
+        return client.send(command);
+    }
+
     async login(email: string, password: string) {
         const command = new InitiateAuthCommand({
             AuthFlow: 'USER_PASSWORD_AUTH',
@@ -41,6 +53,26 @@ export class AuthService {
                 USERNAME: email,
                 PASSWORD: password,
             },
+        });
+
+        return client.send(command);
+    }
+
+    async forgotPassword(email: string) {
+        const command = new ForgotPasswordCommand({
+            ClientId: config.COGNITO_CLIENT_ID,
+            Username: email,
+        });
+
+        return client.send(command);
+    }
+
+    async resetPassword(email: string, code: string, newPassword: string) {
+        const command = new ConfirmForgotPasswordCommand({
+            ClientId: config.COGNITO_CLIENT_ID,
+            Username: email,
+            ConfirmationCode: code,
+            Password: newPassword,
         });
 
         return client.send(command);

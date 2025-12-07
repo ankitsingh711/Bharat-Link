@@ -3,18 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
 import { showToast } from '@/lib/utils/toast';
+import axios from 'axios';
 
-export default function LoginPage() {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+export default function ForgotPasswordPage() {
     const router = useRouter();
-    const { login } = useAuth();
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -22,19 +22,12 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            await login({ email, password });
-            showToast.success('Login successful! Welcome back!');
-            router.push('/feed');
+            await axios.post(`${API_URL}/auth/forgot-password`, { email });
+            showToast.success('Password reset code sent! Check your email.');
+            // Redirect to reset password page with email
+            router.push(`/reset-password?email=${encodeURIComponent(email)}`);
         } catch (err: any) {
-            // Check if user is not confirmed/verified
-            if (err.response?.data?.message?.includes('not confirmed') ||
-                err.response?.data?.message?.includes('User is not confirmed')) {
-                showToast.info('Please verify your email to continue');
-                // Redirect to verification page with indicator that they came from login
-                router.push(`/verify-email?email=${encodeURIComponent(email)}&from=login`);
-                return;
-            }
-            showToast.error(err.response?.data?.message || 'Invalid email or password');
+            showToast.error(err.response?.data?.message || 'Failed to send reset code. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -47,9 +40,9 @@ export default function LoginPage() {
                     <div className="flex justify-center mb-2">
                         <Logo size="md" variant="icon" />
                     </div>
-                    <CardTitle className="text-3xl">Welcome Back</CardTitle>
+                    <CardTitle className="text-3xl">Forgot Password?</CardTitle>
                     <CardDescription className="text-base">
-                        Sign in to your Bharat Link account
+                        Enter your email and we'll send you a code to reset your password
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -63,15 +56,6 @@ export default function LoginPage() {
                             required
                             disabled={isLoading}
                         />
-                        <Input
-                            label="Password"
-                            type="password"
-                            placeholder="Enter your password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            disabled={isLoading}
-                        />
 
                         <Button
                             type="submit"
@@ -79,20 +63,14 @@ export default function LoginPage() {
                             isLoading={isLoading}
                             disabled={isLoading}
                         >
-                            Sign In
+                            Send Reset Code
                         </Button>
                     </form>
 
                     <div className="mt-6 text-center text-sm text-gray-600">
-                        Don't have an account?{' '}
-                        <Link href="/signup" className="text-orange-600 hover:text-orange-700 hover:underline font-semibold transition-colors">
-                            Sign up
-                        </Link>
-                    </div>
-
-                    <div className="mt-4 text-center">
-                        <Link href="/forgot-password" className="text-sm text-gray-600 hover:text-orange-600 hover:underline transition-colors">
-                            Forgot password?
+                        Remember your password?{' '}
+                        <Link href="/login" className="text-orange-600 hover:text-orange-700 hover:underline font-semibold transition-colors">
+                            Sign in
                         </Link>
                     </div>
                 </CardContent>
