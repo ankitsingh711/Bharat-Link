@@ -15,6 +15,14 @@ export const initializeWebSocket = (httpServer: HTTPServer) => {
     io.on('connection', (socket) => {
         console.log('Client connected:', socket.id);
 
+        // Allow users to join their personal notification room
+        socket.on('join:user', (userId: string) => {
+            if (userId) {
+                socket.join(`user:${userId}`);
+                console.log(`User ${userId} joined their notification room`);
+            }
+        });
+
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);
         });

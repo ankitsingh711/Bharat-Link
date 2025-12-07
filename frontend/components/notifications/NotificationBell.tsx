@@ -1,13 +1,37 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Bell } from 'lucide-react';
 import { notificationsApi } from '@/lib/api/endpoints/notifications';
 import { NotificationDropdown } from './NotificationDropdown';
+import { connectSocket } from '@/lib/socket/socket';
 
 export function NotificationBell() {
+    const { data: session } = useSession();
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
+
+    // Connect to WebSocket and join user's notification room
+    useEffect(() => {
+        if (!session?.user?.id) return;
+
+        const socket = connectSocket();
+
+        // Join user's notification room for targeted notifications
+        socket.emit('join:user', session.user.id);
+
+        // Listen for new notifications
+        const handleNewNotification = () => {
+            setUnreadCount((prev) => prev + 1);
+        };
+
+        socket.on('notification:new', handleNewNotification);
+
+        return () => {
+            socket.off('notification:new', handleNewNotification);
+        };
+    }, [session?.user?.id]);
 
     // Fetch unread count on mount
     useEffect(() => {

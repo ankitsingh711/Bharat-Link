@@ -12,11 +12,11 @@ interface LogoProps {
 
 export function Logo({ size = 'md', variant = 'full', className }: LogoProps) {
     const sizes = {
-        xxs: { height: 20, width: variant === 'full' ? 88 : 20 },
+        xxs: { height: 12, width: variant === 'full' ? 60 : 12 },
         xs: { height: 24, width: variant === 'full' ? 105 : 24 },
         sm: { height: 32, width: variant === 'full' ? 140 : 32 },
         md: { height: 48, width: variant === 'full' ? 210 : 48 },
-        lg: { height: 64, width: variant === 'full' ? 280 : 64 },
+        lg: { height: 30, width: variant === 'full' ? 280 : 30 },
     };
 
     const dimensions = sizes[size];

@@ -27,11 +27,8 @@ export function Navbar() {
             <div className="container mx-auto px-4 py-1.5">
                 <div className="flex items-center justify-between">
                     {/* Logo and Brand */}
-                    <Link href={user ? '/feed' : '/'} className="flex items-center space-x-2 cursor-pointer">
+                    <Link href={user ? '/feed' : '/'} className="flex items-center cursor-pointer">
                         <Logo size="xxs" />
-                        <span className="text-lg font-bold bg-gradient-to-r from-orange-500 via-orange-600 to-green-600 bg-clip-text text-transparent">
-                            Bharat Link
-                        </span>
                     </Link>
 
                     {/* Desktop Navigation */}
