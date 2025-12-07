@@ -1,60 +1,53 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from 'next-auth/react';
 import { authApi } from '@/lib/api/endpoints/auth';
-import { usersApi } from '@/lib/api/endpoints/users';
-import type { User, LoginCredentials, SignupData, AuthTokens } from '@/types';
+import type { User, LoginCredentials, SignupData } from '@/types';
+import { useRouter } from 'next/navigation';
+import { showToast } from '@/lib/utils/toast';
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (credentials: LoginCredentials) => Promise<void>;
     signup: (data: SignupData) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { data: session, status, update } = useSession();
+    const router = useRouter();
 
-    // Initialize auth state from localStorage
-    useEffect(() => {
-        const initAuth = async () => {
-            const token = localStorage.getItem('accessToken');
-            if (token) {
-                try {
-                    const userData = await usersApi.getMe();
-                    setUser(userData);
-                } catch (error) {
-                    console.error('Failed to fetch user:', error);
-                    // Clear invalid tokens
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    localStorage.removeItem('idToken');
-                }
-            }
-            setLoading(false);
-        };
+    // Convert session user to app User type
+    const user = session?.user ? {
+        id: session.user.id,
+        email: session.user.email!,
+        name: session.user.name!,
+        createdAt: '', // These will be fetched when needed
+        updatedAt: '',
+    } as User : null;
 
-        initAuth();
-    }, []);
+    const loading = status === 'loading';
 
     const login = async (credentials: LoginCredentials) => {
         try {
-            const tokens: AuthTokens = await authApi.login(credentials);
+            // Use NextAuth signIn
+            const result = await nextAuthSignIn('credentials', {
+                email: credentials.email,
+                password: credentials.password,
+                redirect: false,
+            });
 
-            // Store tokens  
-            localStorage.setItem('accessToken', tokens.accessToken);
-            localStorage.setItem('idToken', tokens.idToken);
-            localStorage.setItem('refreshToken', tokens.refreshToken);
+            if (result?.error) {
+                throw new Error(result.error);
+            }
 
-            // Fetch user data
-            const userData = await usersApi.getMe();
-            setUser(userData);
-        } catch (error) {
+            // Session will be automatically updated by NextAuth
+        } catch (error: any) {
             console.error('Login failed:', error);
             throw error;
         }
@@ -62,39 +55,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signup = async (data: SignupData) => {
         try {
-            const tokens: AuthTokens = await authApi.signup(data);
+            // Signup through API (without tokens in response)
+            await authApi.signup(data);
 
-            // Store tokens
-            localStorage.setItem('accessToken', tokens.accessToken);
-            localStorage.setItem('idToken', tokens.idToken);
-            localStorage.setItem('refreshToken', tokens.refreshToken);
-
-            // Fetch user data
-            const userData = await usersApi.getMe();
-            setUser(userData);
-        } catch (error) {
+            // User needs to verify email before logging in
+            // Don't auto-login after signup
+        } catch (error: any) {
             console.error('Signup failed:', error);
             throw error;
         }
     };
 
-    const logout = () => {
-        // Clear tokens
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('idToken');
-
-        // Clear user state
-        setUser(null);
-
-        // Redirect to login
-        window.location.href = '/login';
+    const logout = async () => {
+        try {
+            // Sign out using NextAuth
+            await nextAuthSignOut({ redirect: false });
+            router.push('/login');
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
     };
 
     const refreshUser = async () => {
         try {
-            const userData = await usersApi.getMe();
-            setUser(userData);
+            // Update the session to get fresh data
+            await update();
         } catch (error) {
             console.error('Failed to refresh user:', error);
         }

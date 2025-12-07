@@ -8,15 +8,20 @@ import { useEffect } from 'react';
 import { Logo } from '@/components/ui/Logo';
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
-  // Redirect authenticated users to feed
+  // Redirect authenticated users to feed (only after loading completes)
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       router.push('/feed');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
+
+  // Show nothing while checking authentication
+  if (loading) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-green-50">

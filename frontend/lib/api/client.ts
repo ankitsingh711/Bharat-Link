@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { getSession } from 'next-auth/react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
@@ -11,12 +12,12 @@ const apiClient: AxiosInstance = axios.create({
     timeout: 10000,
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token from session
 apiClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('accessToken');
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
+    async (config: InternalAxiosRequestConfig) => {
+        const session = await getSession();
+        if (session?.accessToken && config.headers) {
+            config.headers.Authorization = `Bearer ${session.accessToken}`;
         }
         return config;
     },
@@ -36,7 +37,9 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const refreshToken = localStorage.getItem('refreshToken');
+                const session = await getSession();
+                const refreshToken = session?.refreshToken;
+
                 if (refreshToken) {
                     // Attempt to refresh token
                     const response = await axios.post(`${API_URL}/auth/refresh`, {
@@ -44,7 +47,9 @@ apiClient.interceptors.response.use(
                     });
 
                     const { accessToken } = response.data;
-                    localStorage.setItem('accessToken', accessToken);
+
+                    // Note: With NextAuth, we'd need to update the session here
+                    // For now, redirect to login if refresh fails
 
                     // Retry original request with new token
                     if (originalRequest.headers) {
@@ -53,10 +58,7 @@ apiClient.interceptors.response.use(
                     return apiClient(originalRequest);
                 }
             } catch (refreshError) {
-                // Refresh failed, clear tokens and redirect to login
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('idToken');
+                // Refresh failed, redirect to login
                 window.location.href = '/login';
                 return Promise.reject(refreshError);
             }
