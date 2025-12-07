@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Session cache to prevent redundant getSession calls
 let sessionCache: {
-    accessToken: string | null;
+    idToken: string | null;
     timestamp: number;
 } | null = null;
 
@@ -17,20 +17,20 @@ async function getCachedSession() {
 
     // Return cached session if still valid
     if (sessionCache && (now - sessionCache.timestamp < SESSION_CACHE_TTL)) {
-        return sessionCache.accessToken;
+        return sessionCache.idToken;
     }
 
     // Fetch fresh session
     const session = await getSession();
-    const accessToken = session?.accessToken as string | null;
+    const idToken = session?.idToken as string | null;
 
     // Update cache
     sessionCache = {
-        accessToken,
+        idToken,
         timestamp: now,
     };
 
-    return accessToken;
+    return idToken;
 }
 
 // Clear session cache (useful for logout)
@@ -50,9 +50,9 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add auth token from cached session
 apiClient.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-        const accessToken = await getCachedSession();
-        if (accessToken && config.headers) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
+        const idToken = await getCachedSession();
+        if (idToken && config.headers) {
+            config.headers.Authorization = `Bearer ${idToken}`;
         }
         return config;
     },
@@ -83,17 +83,17 @@ apiClient.interceptors.response.use(
                         refreshToken,
                     });
 
-                    const { accessToken } = response.data;
+                    const { accessToken, idToken } = response.data;
 
-                    // Update cache with new token
+                    // Update cache with new ID token
                     sessionCache = {
-                        accessToken,
+                        idToken,
                         timestamp: Date.now(),
                     };
 
                     // Retry original request with new token
                     if (originalRequest.headers) {
-                        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                        originalRequest.headers.Authorization = `Bearer ${idToken}`;
                     }
                     return apiClient(originalRequest);
                 }

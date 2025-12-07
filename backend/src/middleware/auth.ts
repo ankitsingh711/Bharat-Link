@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { config } from '../config';
+import prisma from '../lib/prisma';
 
 // Extend Express Request type
 declare global {
@@ -11,9 +12,16 @@ declare global {
     }
 }
 
-const verifier = CognitoJwtVerifier.create({
+// Create verifiers for both access and ID tokens
+const accessTokenVerifier = CognitoJwtVerifier.create({
     userPoolId: config.COGNITO_USER_POOL_ID,
     tokenUse: 'access',
+    clientId: config.COGNITO_CLIENT_ID,
+});
+
+const idTokenVerifier = CognitoJwtVerifier.create({
+    userPoolId: config.COGNITO_USER_POOL_ID,
+    tokenUse: 'id',
     clientId: config.COGNITO_CLIENT_ID,
 });
 
@@ -31,8 +39,44 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     }
 
     try {
-        const payload = await verifier.verify(token);
-        req.user = payload;
+        // Try to verify as access token first, then ID token
+        let payload;
+        try {
+            payload = await accessTokenVerifier.verify(token);
+            console.log('Verified as access token');
+        } catch (accessError) {
+            // Try ID token
+            payload = await idTokenVerifier.verify(token);
+            console.log('Verified as ID token');
+        }
+
+        console.log('Token payload:', JSON.stringify(payload, null, 2));
+
+        // Get email from token (ID tokens have it, access tokens might not)
+        const email = payload['email'] as string;
+        const cognitoSub = payload.sub;
+
+        if (!email) {
+            console.error('No email in token payload. Sub:', cognitoSub);
+            return res.status(401).json({ message: 'Invalid token: no email claim' });
+        }
+
+        // Find user in database
+        const user = await prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (!user) {
+            console.error(`User not found in database for email: ${email}`);
+            return res.status(401).json({ message: 'User not found' });
+        }
+
+        req.user = {
+            id: user.id,
+            email: user.email,
+            cognitoSub,
+            ...payload
+        };
         next();
     } catch (err) {
         console.error('Token verification failed:', err);

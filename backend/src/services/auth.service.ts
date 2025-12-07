@@ -77,4 +77,16 @@ export class AuthService {
 
         return client.send(command);
     }
+
+    async refreshToken(refreshToken: string) {
+        const command = new InitiateAuthCommand({
+            AuthFlow: 'REFRESH_TOKEN_AUTH',
+            ClientId: config.COGNITO_CLIENT_ID,
+            AuthParameters: {
+                REFRESH_TOKEN: refreshToken,
+            },
+        });
+
+        return client.send(command);
+    }
 }

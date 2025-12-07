@@ -7,12 +7,42 @@ const authService = new AuthService();
 export const signup = async (req: Request, res: Response) => {
     try {
         const { email, password, name } = req.body;
+
+        // Check if user already exists in Prisma
+        const existingUser = await prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (existingUser) {
+            return res.status(400).json({
+                message: 'User already exists in database. Please login instead.'
+            });
+        }
+
         // 1. Register in Cognito
-        const cognitoRes = await authService.signup(email, password, name);
+        let cognitoRes;
+        try {
+            cognitoRes = await authService.signup(email, password, name);
+        } catch (cognitoError: any) {
+            // If user exists in Cognito but not in Prisma, create Prisma record
+            if (cognitoError.name === 'UsernameExistsException') {
+                console.log(`User ${email} exists in Cognito but not in Prisma. Creating Prisma record...`);
+
+                // Create user in Prisma to sync with Cognito
+                await prisma.user.create({
+                    data: { email, name }
+                });
+
+                return res.status(409).json({
+                    message: 'User already registered in Cognito. Database record created. Please verify your email or login.',
+                    requiresVerification: true
+                });
+            }
+            // Re-throw other Cognito errors
+            throw cognitoError;
+        }
 
         // 2. Create User in DB (Pending verification)
-        // Note: We might want to do this after verification or handle race conditions
-        // For now, we'll create the user record
         await prisma.user.create({
             data: {
                 email,
@@ -21,7 +51,10 @@ export const signup = async (req: Request, res: Response) => {
             }
         });
 
-        res.status(201).json({ message: 'User registered successfully. Please verify your email.', userSub: cognitoRes.UserSub });
+        res.status(201).json({
+            message: 'User registered successfully. Please verify your email.',
+            userSub: cognitoRes.UserSub
+        });
     } catch (error: any) {
         console.error('Signup error:', error);
         res.status(400).json({ message: error.message || 'Signup failed' });
@@ -58,6 +91,31 @@ export const login = async (req: Request, res: Response) => {
             refreshToken: result.AuthenticationResult?.RefreshToken
         });
     } catch (error: any) {
+        console.error('Login error:', error);
+
+        // Provide specific error messages based on Cognito error codes
+        if (error.name === 'UserNotConfirmedException') {
+            return res.status(401).json({
+                message: 'Email not verified. Please check your email for the verification code.',
+                code: 'EMAIL_NOT_VERIFIED',
+                email: req.body.email
+            });
+        }
+
+        if (error.name === 'NotAuthorizedException') {
+            return res.status(401).json({
+                message: 'Incorrect email or password.',
+                code: 'INVALID_CREDENTIALS'
+            });
+        }
+
+        if (error.name === 'UserNotFoundException') {
+            return res.status(401).json({
+                message: 'User not found. Please sign up first.',
+                code: 'USER_NOT_FOUND'
+            });
+        }
+
         res.status(401).json({ message: error.message || 'Login failed' });
     }
 };
@@ -81,5 +139,25 @@ export const resetPassword = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Reset password error:', error);
         res.status(400).json({ message: error.message || 'Failed to reset password' });
+    }
+};
+
+export const refreshToken = async (req: Request, res: Response) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ message: 'Refresh token is required' });
+        }
+
+        const result = await authService.refreshToken(refreshToken);
+
+        res.status(200).json({
+            accessToken: result.AuthenticationResult?.AccessToken,
+            idToken: result.AuthenticationResult?.IdToken,
+        });
+    } catch (error: any) {
+        console.error('Token refresh error:', error);
+        res.status(401).json({ message: error.message || 'Token refresh failed' });
     }
 };

@@ -24,19 +24,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     });
 
                     if (!res.ok) {
+                        const errorData = await res.json();
+                        console.error('Backend login error:', errorData);
+
+                        // Log specific error for debugging
+                        if (errorData.code === 'EMAIL_NOT_VERIFIED') {
+                            console.error('❌ Email not verified. User needs to verify email first.');
+                        } else if (errorData.code === 'INVALID_CREDENTIALS') {
+                            console.error('❌ Invalid email or password.');
+                        }
+
+                        // Return null to trigger CredentialsSignin error
+                        // NextAuth doesn't allow custom error messages from authorize
                         return null;
                     }
 
                     const tokens = await res.json();
 
-                    // Fetch user data
+                    // Fetch user data using ID token (has email claim)
                     const userRes = await fetch(`${API_URL}/users/me`, {
                         headers: {
-                            Authorization: `Bearer ${tokens.accessToken}`,
+                            Authorization: `Bearer ${tokens.idToken}`,
                         },
                     });
 
                     if (!userRes.ok) {
+                        console.error('Failed to fetch user data:', await userRes.text());
                         return null;
                     }
 
@@ -73,15 +86,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 token.refreshToken = user.refreshToken;
                 token.idToken = user.idToken;
                 token.id = user.id;
+                token.email = user.email;
+                token.name = user.name;
             }
             return token;
         },
         async session({ session, token }) {
             // Send properties to the client
             session.user = {
+                ...session.user,
                 id: token.id as string,
-                email: token.email as string,
-                name: token.name as string,
+                email: token.email as string || session.user.email,
+                name: token.name as string || session.user.name,
             };
             session.accessToken = token.accessToken as string;
             session.refreshToken = token.refreshToken as string;
