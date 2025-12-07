@@ -5,18 +5,25 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react'; // Import useEffect
 
 export default function FeedLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const { user, logout } = useAuth();
+    const { user, loading, logout } = useAuth(); // Destructure 'loading'
     const router = useRouter();
 
-    // Redirect if not authenticated
-    if (!user) {
-        router.push('/login');
+    // Redirect if not authenticated (use useEffect to avoid render-time router.push)
+    useEffect(() => {
+        if (!loading && !user) {
+            router.push('/login');
+        }
+    }, [user, loading, router]);
+
+    // Show nothing while loading or redirecting
+    if (loading || !user) {
         return null;
     }
 
